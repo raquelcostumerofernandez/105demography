@@ -1,0 +1,114 @@
+#!/usr/bin/python3
+import csv
+import sys
+
+class Info:
+    sumy:int
+    sumysqr:int
+    def __init__(self) -> None:
+        self.data = []
+        self.rows = []
+        file = open("data/105demography_data.csv", "r")
+        csvreader = csv.reader(file, delimiter=';')
+        self.year = list(next(csvreader))[2:]
+        for row in csvreader:
+            self.rows.append(list(row))
+        self.sumx = sum([int(i) for i in self.year])
+        self.sumxsqr = sum([int(i) ** 2 for i in self.year])
+
+#math
+def pop_add(population, rows):
+    for i in range(len(population)):
+        population[i] = population[i] + int(rows[i + 2])
+
+def pop(population, code, country):
+    rows = Info().rows
+    for i in range(len(rows)):
+        if rows[i][1] == code:
+            country.append(rows[i][0])
+            pop_add(population, rows[i])
+            return
+    raise Exception("ERROR: Country not found")
+
+def add_pop(population, country):
+    for i in range(len(sys.argv) - 1):
+        pop(population, sys.argv[i + 1], country)
+
+def mul_xy(info, population):
+    result = 0
+    for i in range(len(population)):
+        result = result + (int(population[i]) * int(info.year[i]))
+    return result
+
+def rmq(a, b, population, year):
+    result = 0
+    for i in range(len(population)):
+        result = result + ((population[i] - (a * float(year[i]) + b)) ** 2)
+    result = (result / 58) ** 0.5
+    return result
+
+def rmqx(a, b, population, year):
+    result = 0
+    for i in range(len(population)):
+        result = result + ((population[i] - ((float(year[i]) - b) / a)) ** 2)
+    result = (result / 58) ** 0.5
+    return result
+
+def print_fity(ay, by, rmqy, popy):
+    print("Fit1")
+    if by < 0:
+        print(f"\tY = {(ay / (10 ** 6)):.2f} X - {(-by / (10 **6)):.2f}")
+    else:
+        print(f"\tY = {(ay / (10 ** 6)):.2f} X + {(by / (10 **6)):.2f}")
+    print(f"\tRoot-mean-square deviation: {(rmqy / (10 ** 6)):.2f}")
+    print(f"\tPopulation in 2050: {(popy / (10 ** 6)):.2f}")
+
+def print_fitx(ax, bx, rmqx, popx):
+    print("Fit2")
+    if bx < 0:
+        print(f"\tX = {(ax * (10 ** 6)):.2f} Y - {(-bx):.2f}")
+    else:
+        print(f"\tX = {(ax * (10 ** 6)):.2f} Y + {(bx):.2f}")
+    print(f"\tRoot-mean-square deviation: {(rmqx / (10 ** 6)):.2f}")
+    print(f"\tPopulation in 2050: {(popx / (10 ** 6)):.2f}")
+
+def operations(info, population, country):
+    sumy = sum(int(i) for i in population)
+    sumysqr = sum(int(i) ** 2 for i in population)
+    sum_xy = mul_xy(info, population)
+    ay = ((58 * sum_xy) - (info.sumx * sumy)) / ((58 * info.sumxsqr) - (info.sumx ** 2))
+    by = ((sumy * info.sumxsqr) - (info.sumx * sum_xy)) / ((58 * info.sumxsqr)- (info.sumx ** 2))
+    ax = ((58 * sum_xy) - (info.sumx * sumy)) / ((58 * sumysqr) - (sumy ** 2))
+    bx = ((info.sumx * sumysqr) - (sumy * sum_xy)) / ((58 * sumysqr)- (sumy ** 2))
+    popx = (2050 - bx) / ax
+    popy = (ay * 2050) + by
+    cc = ((58 * sum_xy) - (sumy * info.sumx)) / ((((58 * info.sumxsqr) - (info.sumx ** 2)) * ((58 * sumysqr) - (sumy **2))) ** 0.5)
+    rmsdy = rmq(ay, by, population, info.year)
+    rmsdx = rmqx(ax, bx, population, info.year)
+    #print
+    list.sort(country)
+    print(f"Country: {', '.join(country)}")
+    print_fity(ay, by, rmsdy, popy)
+    print_fitx(ax, bx, rmsdx, popx)
+    print(f"Correlation: {cc:.4f}")
+
+#main
+def main():
+    if (len(sys.argv) < 2):
+        raise Exception('ERROR: Country not entered')
+    info = Info()
+    population = []
+    country = []
+    for i in range(58):
+        population.append(0)
+    add_pop(population, country)
+    operations(info, population, country)
+
+if __name__ == "__main__":
+    try:
+        main()
+        pass
+    except Exception as e:
+        print(e, file=sys.stderr)
+        exit(84)
+
